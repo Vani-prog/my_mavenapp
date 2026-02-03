@@ -1,49 +1,46 @@
 pipeline {
-      agent any
+    agent any
 
-     triggers{
-	   cron("* * * * *")
-     }
-  
-     environment {
-	     DOCKERHUB_CRED = credentials('dockerhub')
-	     IMAGE_NAME = "vanireddy2025/my_mavenapp"
-     }
-	
-     stages {
-	  stage('checkout'){
-	     steps{
-                 script{
-		      git url: "https://github.com/Vani-prog/my_mavenapp.git",
-		      branch: 'main'
-		}
-	    }
-	 }
+    triggers {
+        cron('* * * * *')   // runs every minute
+    }
 
-	stage('Build With Maven'){
-	    steps{
-		script{
-		     sh 'mvn clean package -DskipTests'
-		}
-	    }
-        }
+    environment {
+        DOCKERHUB_CRED = credentials('dockerhub')
+        IMAGE_NAME = "vanireddy2025/my_mavenapp"
+    }
 
-	stage('Build with docker'){
-	    steps{
-		script{
-		     dockerImage=docker.build("${IMAGE_NAME}:latest")
-		}
-	    }
-        }
+    stages {
 
-	stage('Push'){
-	    steps{
-		script{
-		     docker.withRegistry("https://index.docker.io/v1/', 'dockerhub'){
-		     dockerImage.push()
-								 }
-		}
+        stage('Checkout') {
+            steps {
+                git url: 'https://github.com/Vani-prog/my_mavenapp.git',
+                    branch: 'main'
             }
         }
-     }
+
+        stage('Build with Maven') {
+            steps {
+                sh 'mvn clean package -DskipTests'
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                script {
+                    dockerImage = docker.build("${IMAGE_NAME}:latest")
+                }
+            }
+        }
+
+        stage('Push Image to Docker Hub') {
+            steps {
+                script {
+                    docker.withRegistry('https://index.docker.io/v1/', 'dockerhub') {
+                        dockerImage.push('latest')
+                    }
+                }
+            }
+        }
+    }
 }
